@@ -251,8 +251,11 @@
     <div class="flex flex-col lg:flex-row gap-8">
         
         <!-- KOLOM KIRI: FORM INPUT -->
-        <div class="w-full lg:w-1/2 bg-white rounded-lg shadow-md p-6 h-fit no-print">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Pengaturan Nota</h2>
+        <div class="w-full lg:w-1/2 flex flex-col gap-6 no-print">
+            
+            <!-- CARD 1: PENGATURAN NOTA -->
+            <div class="bg-white rounded-lg shadow-md p-6 h-fit">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Pengaturan Nota</h2>
             
             <div class="grid grid-cols-2 gap-4 mb-4">
                 <div>
@@ -330,6 +333,12 @@
                     </div>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2 items-end justify-end">
+                    <button @click="saveToHistory" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded shadow-md w-full sm:w-auto flex justify-center items-center gap-2 text-sm transition-colors duration-200 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                        Simpan Draft
+                    </button>
                     <button @click="printReceipt" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow-md w-full sm:w-auto flex justify-center items-center gap-2 text-sm transition-colors duration-200 cursor-pointer">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
@@ -342,6 +351,65 @@
                         </svg>
                         Download PDF
                     </button>
+                </div>
+            </div>
+            
+            <!-- CARD 2: RIWAYAT & DRAFTS PANEL -->
+            <div class="bg-white rounded-lg shadow-md p-6 h-fit">
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="text-lg font-bold text-gray-800">Riwayat & Draft Nota</h3>
+                    </div>
+                    <button v-if="historyList.length > 0" @click="clearHistory" class="text-xs text-red-600 hover:text-red-800 font-semibold flex items-center gap-1 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Hapus Semua
+                    </button>
+                </div>
+
+                <!-- Search and Filter Drafts -->
+                <div v-if="historyList.length > 0" class="mb-3">
+                    <input type="text" v-model="searchQuery" placeholder="Cari berdasarkan nama customer atau tanggal..." class="w-full border rounded px-3 py-1.5 text-xs focus:ring focus:ring-blue-100 outline-none">
+                </div>
+
+                <div v-if="filteredHistory.length === 0" class="text-center py-6 text-gray-400 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Belum ada draft tersimpan. Klik <strong>"Simpan Draft"</strong> untuk merekam data nota saat ini.
+                </div>
+
+                <div v-else class="max-h-64 overflow-y-auto space-y-2 pr-1">
+                    <div v-for="draft in filteredHistory" :key="draft.id" class="p-3 bg-gray-50 hover:bg-gray-100 border rounded-lg transition-colors duration-200 flex items-center justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold text-xs text-gray-800 truncate">{{ draft.kepada }}</span>
+                                <span :class="[draft.isLunas ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800', 'text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0']">
+                                    {{ draft.isLunas ? 'Lunas' : 'Draft' }}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-3 text-[10px] text-gray-500">
+                                <span>{{ draft.tanggal }}</span>
+                                <span class="font-semibold text-blue-600">Total: Rp {{ formatNumber(draft.total) }}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-1.5 shrink-0">
+                            <button @click="loadDraft(draft)" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold p-1.5 rounded transition-colors" title="Tarik / Muat Draft">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                            </button>
+                            <button @click="deleteDraft(draft.id)" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold p-1.5 rounded transition-colors" title="Hapus Draft">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -495,6 +563,22 @@
             
         </div>
     </div>
+
+    <!-- Floating Toast Notification -->
+    <div v-if="toast.show" class="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border text-sm font-semibold transition-all duration-300 transform translate-y-0 no-print"
+         :class="[
+             toast.type === 'success' ? 'bg-emerald-500 border-emerald-600 text-white' : 
+             toast.type === 'error' ? 'bg-red-500 border-red-600 text-white' : 
+             'bg-blue-500 border-blue-600 text-white'
+         ]">
+        <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span>{{ toast.message }}</span>
+    </div>
 </div>
 
 <script>
@@ -505,6 +589,13 @@
             return {
                 isFullWidth: false,
                 isViewMode: false,
+                historyList: [],
+                searchQuery: "",
+                toast: {
+                    show: false,
+                    message: "",
+                    type: "success"
+                },
                 // Data default diatur agar SAMA PERSIS dengan foto nota yang diberikan
                 form: {
                     tanggal: "02-07-2026 17:03",
@@ -536,6 +627,17 @@
                 return this.form.items.reduce((sum, item) => {
                     return sum + (Number(item.harga) * Number(item.qty));
                 }, 0);
+            },
+            filteredHistory() {
+                if (!this.searchQuery) {
+                    return this.historyList;
+                }
+                const query = this.searchQuery.toLowerCase();
+                return this.historyList.filter(draft => {
+                    const matchesCustomer = draft.kepada && draft.kepada.toLowerCase().includes(query);
+                    const matchesDate = draft.tanggal && draft.tanggal.toLowerCase().includes(query);
+                    return matchesCustomer || matchesDate;
+                });
             }
         },
         watch: {
@@ -672,9 +774,76 @@
                     colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.M
                 });
+            },
+            showToast(message, type = 'success') {
+                this.toast.message = message;
+                this.toast.type = type;
+                this.toast.show = true;
+                
+                if (this.toastTimeout) {
+                    clearTimeout(this.toastTimeout);
+                }
+                
+                this.toastTimeout = setTimeout(() => {
+                    this.toast.show = false;
+                }, 3000);
+            },
+            saveToHistory() {
+                try {
+                    const newDraft = {
+                        id: Date.now(),
+                        tanggal: this.form.tanggal || new Date().toLocaleString('id-ID'),
+                        kepada: this.form.kepada || 'Tanpa Nama',
+                        total: this.subtotal,
+                        isLunas: this.form.isLunas,
+                        form: JSON.parse(JSON.stringify(this.form))
+                    };
+                    this.historyList.unshift(newDraft);
+                    localStorage.setItem('receipt_history', JSON.stringify(this.historyList));
+                    this.showToast("Berhasil menyimpan draft ke history!");
+                } catch (e) {
+                    console.error("Error saving to history:", e);
+                    this.showToast("Gagal menyimpan draft", "error");
+                }
+            },
+            loadDraft(draft) {
+                try {
+                    this.form = JSON.parse(JSON.stringify(draft.form));
+                    this.showToast(`Berhasil memuat draft untuk ${draft.kepada}!`);
+                } catch (e) {
+                    console.error("Error loading draft:", e);
+                    this.showToast("Gagal memuat draft", "error");
+                }
+            },
+            deleteDraft(id) {
+                try {
+                    this.historyList = this.historyList.filter(item => item.id !== id);
+                    localStorage.setItem('receipt_history', JSON.stringify(this.historyList));
+                    this.showToast("Draft berhasil dihapus.");
+                } catch (e) {
+                    console.error("Error deleting draft:", e);
+                    this.showToast("Gagal menghapus draft", "error");
+                }
+            },
+            clearHistory() {
+                if (confirm("Apakah Anda yakin ingin menghapus semua history draft?")) {
+                    this.historyList = [];
+                    localStorage.removeItem('receipt_history');
+                    this.showToast("Semua history draft berhasil dibersihkan.");
+                }
             }
         },
         mounted() {
+            // Load saved history from localStorage
+            const savedHistory = localStorage.getItem('receipt_history');
+            if (savedHistory) {
+                try {
+                    this.historyList = JSON.parse(savedHistory);
+                } catch (e) {
+                    console.error("Failed to parse receipt history from localStorage:", e);
+                }
+            }
+
             // Check if there is a 'view' parameter in the URL
             const urlParams = new URLSearchParams(window.location.search);
             const viewData = urlParams.get('view');
@@ -704,6 +873,7 @@
                     }
                     
                     this.isViewMode = true;
+                    this.showToast("Nota digital berhasil dimuat!");
                 } catch (e) {
                     console.error("Failed to parse view query parameter:", e);
                 }
