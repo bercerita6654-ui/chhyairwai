@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Nota Thermal Cahya Printing</title>
+    <!-- Tailwind CSS untuk Layout UI Aplikasi -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 untuk State Management -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- QR Code Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- html2pdf.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* CSS Khusus untuk Tampilan Nota Thermal */
+        @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+
+        /* Sembunyikan elemen UI saat di-print */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #receipt-container, #receipt-container * {
+                visibility: visible;
+            }
+            #receipt-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%; /* Lebar penuh ke kertas thermal */
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+            /* Hilangkan margin default browser saat print */
+            @page {
+                margin: 0;
+                padding: 0;
+            }
+        }
+
+        /* Styling area nota */
+        .receipt-paper {
+            width: 320px; /* Lebar standar preview untuk printer 80mm */
+            background-color: white;
+            color: black;
+            font-family: Arial, Helvetica, sans-serif; /* Font standar nota */
+            padding: 10px 15px;
+            margin: 0 auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .receipt-paper.w-full-override {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .receipt-paper p {
+            margin: 0;
+            padding: 0;
+        }
+
+        .logo-cahya {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Varela Round', Arial, sans-serif;
+            font-size: 28px;
+            font-weight: bold;
+            color: #0033cc; /* Biru logo */
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+
+        .logo-a {
+            position: relative;
+        }
+
+        .logo-dot {
+            position: absolute;
+            background-color: red;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .receipt-header {
+            text-align: center;
+            font-size: 11px;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+
+        .qr-box {
+            border: 1px solid #000;
+            border-radius: 6px;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        #qrcode img {
+            width: 60px;
+            height: 60px;
+        }
+
+        .qr-text {
+            font-size: 11px;
+            line-height: 1.2;
+            text-align: left;
+        }
+
+        .meta-table {
+            width: 100%;
+            font-size: 12px;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+        }
+
+        .meta-table td {
+            vertical-align: top;
+            padding: 1px 0;
+        }
+
+        .meta-table td.label-col {
+            width: 75px;
+        }
+
+        .meta-table td.colon-col {
+            width: 10px;
+        }
+
+        .items-table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+            margin-bottom: 5px;
+        }
+
+        .items-table th {
+            border-top: 1px solid #000;
+            border-bottom: 1px dashed #000;
+            padding: 4px 0;
+            font-weight: normal;
+            text-align: left;
+        }
+
+        .items-table td {
+            vertical-align: top;
+            padding: 2px 0;
+        }
+
+        .col-produk { width: 40%; }
+        .col-harga { width: 22%; text-align: right; }
+        .col-qty { width: 13%; text-align: right; }
+        .col-total { width: 25%; text-align: right; }
+
+        .item-details {
+            font-size: 11px;
+            line-height: 1.3;
+            white-space: pre-line; /* Mempertahankan enter/newline */
+            margin-top: 2px;
+            margin-bottom: 4px;
+        }
+
+        .line-solid {
+            border-bottom: 1px solid #000;
+            margin: 5px 0;
+        }
+
+        .totals-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+
+        .totals-table {
+            font-size: 12px;
+            width: 160px;
+            border-collapse: collapse;
+        }
+
+        .totals-table td {
+            padding: 1px 0;
+            text-align: right;
+        }
+        .totals-table td:first-child {
+            text-align: right;
+            padding-right: 10px;
+            width: 80px;
+        }
+
+        .receipt-footer {
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.3;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #000;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<div id="app" class="container mx-auto p-4 max-w-6xl">
+    <div class="flex flex-col lg:flex-row gap-8">
+        
+        <!-- KOLOM KIRI: FORM INPUT -->
+        <div class="w-full lg:w-1/2 bg-white rounded-lg shadow-md p-6 h-fit no-print">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Pengaturan Nota</h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal & Waktu</label>
+                    <input type="text" v-model="form.tanggal" class="w-full border rounded p-2 focus:ring focus:ring-blue-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kepada (Customer)</label>
+                    <input type="text" v-model="form.kepada" class="w-full border rounded p-2 font-bold focus:ring focus:ring-blue-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Transaksi (Metode)</label>
+                    <input type="text" v-model="form.transaksi" class="w-full border rounded p-2 uppercase focus:ring focus:ring-blue-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kasir</label>
+                    <input type="text" v-model="form.kasir" class="w-full border rounded p-2 focus:ring focus:ring-blue-200 outline-none">
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Customer Service (CS)</label>
+                    <input type="text" v-model="form.cs" class="w-full border rounded p-2 uppercase focus:ring focus:ring-blue-200 outline-none">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-center border-b pb-2 mb-2">
+                    <h3 class="text-lg font-semibold text-gray-800">Daftar Produk</h3>
+                    <button @click="addItem" class="bg-green-500 hover:bg-green-600 text-white text-sm px-3 py-1 rounded shadow">
+                        + Tambah Produk
+                    </button>
+                </div>
+
+                <div v-for="(item, index) in form.items" :key="index" class="bg-gray-50 p-3 rounded border mb-3 relative">
+                    <button @click="removeItem(index)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold px-2">&times;</button>
+                    
+                    <div class="grid grid-cols-12 gap-2 mb-2">
+                        <div class="col-span-12 sm:col-span-5">
+                            <label class="block text-xs font-medium text-gray-500">Nama Produk</label>
+                            <input type="text" v-model="item.nama" class="w-full border rounded px-2 py-1 text-sm font-bold">
+                        </div>
+                        <div class="col-span-4 sm:col-span-3">
+                            <label class="block text-xs font-medium text-gray-500">Harga</label>
+                            <input type="number" v-model="item.harga" class="w-full border rounded px-2 py-1 text-sm">
+                        </div>
+                        <div class="col-span-4 sm:col-span-2">
+                            <label class="block text-xs font-medium text-gray-500">Qty</label>
+                            <input type="number" v-model="item.qty" class="w-full border rounded px-2 py-1 text-sm">
+                        </div>
+                        <div class="col-span-4 sm:col-span-2">
+                            <label class="block text-xs font-medium text-gray-500">Total</label>
+                            <div class="px-2 py-1 text-sm font-semibold bg-gray-200 rounded">{{ formatNumber(item.harga * item.qty) }}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500">Keterangan / Sub-item (opsional)</label>
+                        <textarea v-model="item.keterangan" rows="2" class="w-full border rounded px-2 py-1 text-sm text-gray-700"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nominal Bayar (Opsional)</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" v-model="form.bayar" class="w-full border rounded p-2 focus:ring focus:ring-blue-200 outline-none">
+                        <button @click="setToLunas" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded text-xs whitespace-nowrap cursor-pointer transition-colors">
+                            Set Lunas
+                        </button>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="isLunas" v-model="form.isLunas" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer">
+                        <label for="isLunas" class="ml-2 block text-xs text-gray-700 font-semibold cursor-pointer select-none">
+                            Tandai sebagai Lunas (Keterangan: Lunas)
+                        </label>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2 items-end justify-end">
+                    <button @click="printReceipt" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow-md w-full sm:w-auto flex justify-center items-center gap-2 text-sm transition-colors duration-200 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                        </svg>
+                        Cetak Nota
+                    </button>
+                    <button @click="downloadPDF" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded shadow-md w-full sm:w-auto flex justify-center items-center gap-2 text-sm transition-colors duration-200 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        Download PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KOLOM KANAN: PREVIEW NOTA -->
+        <div class="w-full lg:w-1/2 flex flex-col items-center justify-start">
+            
+            <!-- Toggle View Mode -->
+            <div class="w-full max-w-md bg-white rounded-lg shadow-sm p-2 mb-4 flex justify-between items-center gap-2 no-print border border-gray-100">
+                <span class="text-xs font-semibold text-gray-500 ml-2">Preview Mode:</span>
+                <div class="flex bg-gray-100 p-1 rounded-md">
+                    <button @click="isFullWidth = false" :class="[!isFullWidth ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900', 'px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all duration-200']">
+                        Thermal (320px)
+                    </button>
+                    <button @click="isFullWidth = true" :class="[isFullWidth ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900', 'px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all duration-200']">
+                        Full Width
+                    </button>
+                </div>
+            </div>
+            
+            <div id="receipt-container" :class="['receipt-paper', isFullWidth ? 'w-full-override' : '']">
+                
+                <!-- HEADER & LOGO -->
+                <div class="flex justify-center items-center mb-3">
+                    <svg viewBox="0 0 410 180" class="h-14 w-auto" xmlns="http://www.w3.org/2000/svg">
+                        <!-- c -->
+                        <path d="M 74.7 55.3 A 35 35 0 1 0 74.7 104.7" fill="none" stroke="#0000FF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+                        <!-- a (with red dot) -->
+                        <circle cx="135" cy="80" r="35" fill="none" stroke="#0000FF" stroke-width="14" />
+                        <path d="M 170 45 L 170 120" stroke="#0000FF" stroke-width="14" stroke-linecap="round" />
+                        <circle cx="135" cy="80" r="18" fill="#FF0000" />
+                        <!-- h -->
+                        <path d="M 185 10 L 185 120" stroke="#0000FF" stroke-width="14" stroke-linecap="round" />
+                        <path d="M 185 75 A 25 25 0 0 1 235 75 L 235 120" fill="none" stroke="#0000FF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+                        <!-- y -->
+                        <path d="M 250 45 L 250 80 A 25 25 0 0 0 300 80 L 300 45" fill="none" stroke="#0000FF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M 300 45 L 300 130 A 25 25 0 0 1 250 155" fill="none" stroke="#0000FF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+                        <!-- a -->
+                        <circle cx="350" cy="80" r="35" fill="none" stroke="#0000FF" stroke-width="14" />
+                        <path d="M 385 45 L 385 120" stroke="#0000FF" stroke-width="14" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="receipt-header">
+                    Jl. Tukad Irawadi, No.4, Panjer, Denpasar<br>
+                    www.cahyaprinting.com
+                </div>
+
+                <!-- QR CODE AREA -->
+                <div class="qr-box">
+                    <div id="qrcode"></div>
+                    <div class="qr-text">
+                        Scan QR-Code untuk Download<br>
+                        Nota Digital & Cek Status Order
+                    </div>
+                </div>
+
+                <!-- META INFO TRANSAKSI -->
+                <table class="meta-table">
+                    <tr>
+                        <td class="label-col">Tanggal</td>
+                        <td class="colon-col">:</td>
+                        <td>{{ form.tanggal }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Kepada</td>
+                        <td class="colon-col">:</td>
+                        <td><strong style="font-size: 14px;">{{ form.kepada }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Transaksi</td>
+                        <td class="colon-col">:</td>
+                        <td><strong>{{ form.transaksi }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Kasir</td>
+                        <td class="colon-col">:</td>
+                        <td>{{ form.kasir }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">CS</td>
+                        <td class="colon-col">:</td>
+                        <td>{{ form.cs }}</td>
+                    </tr>
+                </table>
+
+                <!-- TABEL PRODUK -->
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th class="col-produk">Produk</th>
+                            <th class="col-harga">Harga</th>
+                            <th class="col-qty">Qty</th>
+                            <th class="col-total">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template v-for="(item, index) in form.items" :key="'item-'+index">
+                            <!-- Baris Utama Item -->
+                            <tr>
+                                <td class="col-produk"><strong>{{ item.nama }}</strong></td>
+                                <td class="col-harga">{{ formatNumber(item.harga) }}</td>
+                                <td class="col-qty">{{ item.qty }}</td>
+                                <td class="col-total">{{ formatNumber(item.harga * item.qty) }}</td>
+                            </tr>
+                            <!-- Baris Keterangan (jika ada) -->
+                            <tr v-if="item.keterangan">
+                                <td colspan="4">
+                                    <div class="item-details">{{ item.keterangan }}</div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                
+                <div class="line-solid"></div>
+
+                <!-- SUBTOTAL & TOTAL -->
+                <div class="totals-wrapper">
+                    <table class="totals-table">
+                        <tr>
+                            <td>Sub-total</td>
+                            <td>:</td>
+                            <td>{{ formatNumber(subtotal) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Total</td>
+                            <td>:</td>
+                            <td>{{ formatNumber(subtotal) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Bayar</td>
+                            <td>:</td>
+                            <td>{{ form.bayar }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Keterangan Lunas -->
+                <div v-if="form.isLunas" class="text-left mt-2 mb-4" style="font-size: 13px;">
+                    Keterangan : <strong class="text-black" style="font-size: 19px; font-family: Arial, Helvetica, sans-serif;">Lunas</strong>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="receipt-footer">
+                    <strong v-if="!form.isLunas">Nota sementara<br>bukan bukti pembayaran yang sah</strong><br v-if="!form.isLunas"><br v-if="!form.isLunas">
+                    TERIMA KASIH<br>
+                    Silahkan Berkunjung Kembali
+                </div>
+
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                isFullWidth: false,
+                // Data default diatur agar SAMA PERSIS dengan foto nota yang diberikan
+                form: {
+                    tanggal: "02-07-2026 17:03",
+                    kepada: "Bobby 1",
+                    transaksi: "EMAIL",
+                    kasir: "",
+                    cs: "KADEK JUNIANTARA",
+                    bayar: "",
+                    isLunas: false,
+                    items: [
+                        {
+                            nama: "Sticker Hologram A3+",
+                            harga: 10000,
+                            qty: 10,
+                            keterangan: "- Harga Satuan: Rp 10.000 per lembar\n- Nama File: Hologram 10x laminasi glossy"
+                        },
+                        {
+                            nama: "Laminasi Glossy Hot A3+",
+                            harga: 1000,
+                            qty: 10,
+                            keterangan: "- 10 lembar Laminasi Glossy Hot A3+"
+                        }
+                    ]
+                }
+            }
+        },
+        computed: {
+            subtotal() {
+                return this.form.items.reduce((sum, item) => {
+                    return sum + (Number(item.harga) * Number(item.qty));
+                }, 0);
+            }
+        },
+        watch: {
+            'form.isLunas'(newVal) {
+                if (newVal) {
+                    this.form.bayar = this.formatNumber(this.subtotal);
+                } else {
+                    this.form.bayar = "";
+                }
+            }
+        },
+        methods: {
+            formatNumber(num) {
+                if (!num) return "0";
+                // Format dengan titik sebagai pemisah ribuan ala Indonesia
+                return Number(num).toLocaleString('id-ID');
+            },
+            addItem() {
+                this.form.items.push({
+                    nama: "Item Baru",
+                    harga: 0,
+                    qty: 1,
+                    keterangan: ""
+                });
+            },
+            removeItem(index) {
+                this.form.items.splice(index, 1);
+            },
+            setToLunas() {
+                this.form.isLunas = true;
+                this.form.bayar = this.formatNumber(this.subtotal);
+            },
+            printReceipt() {
+                window.print();
+            },
+            downloadPDF() {
+                const element = document.getElementById('receipt-container');
+                const customerName = this.form.kepada || 'Customer';
+                const formattedName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
+                const filename = `Nota_${formattedName}.pdf`;
+                
+                // Options configured precisely for thermal receipt proportion (approx 80mm width standard)
+                const opt = {
+                    margin:       [4, 4, 4, 4], // tight margins for thermal receipts
+                    filename:     filename,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 3, useCORS: true, letterRendering: true },
+                    jsPDF:        { unit: 'mm', format: [85, 230], orientation: 'portrait' }
+                };
+                
+                // Generate and download PDF
+                html2pdf().set(opt).from(element).save();
+            },
+            generateQRCode() {
+                // Hapus QR lama jika ada
+                document.getElementById("qrcode").innerHTML = "";
+                // Buat QR code baru yang statis meniru contoh nota
+                new QRCode(document.getElementById("qrcode"), {
+                    text: "https://cahyaprinting.com/order-status", // Dummy URL
+                    width: 60,
+                    height: 60,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.L
+                });
+            }
+        },
+        mounted() {
+            // Render QR code ketika aplikasi pertama kali dimuat
+            this.generateQRCode();
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
