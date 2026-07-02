@@ -248,10 +248,50 @@
         </div>
     </div>
 
+    <!-- HEADER APLIKASI (No-Print) -->
+    <header class="mb-6 pb-4 border-b border-gray-200 no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <span class="bg-blue-600 text-white p-1 rounded">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </span>
+                Cahya Printing Receipt Maker
+            </h1>
+            <p class="text-sm text-slate-500">Buat, cetak, dan simpan draf struk nota thermal 80mm dengan mudah dan cepat.</p>
+        </div>
+        <div class="flex items-center gap-2 self-start sm:self-center">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full border border-slate-300 flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                Sistem Aktif
+            </span>
+        </div>
+    </header>
+
+    <!-- TAB NAVIGASI KHUSUS MOBILE (Hanya Muncul di Layar Kecil) -->
+    <div class="lg:hidden mb-6 bg-white rounded-lg shadow p-1 flex gap-2 no-print border border-slate-200">
+        <button @click="activeTab = 'edit'" 
+                :class="[activeTab === 'edit' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50', 'flex-1 py-3 px-4 rounded-md text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer']">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            1. Edit & Draft Nota
+        </button>
+        <button @click="activeTab = 'preview'" 
+                :class="[activeTab === 'preview' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50', 'flex-1 py-3 px-4 rounded-md text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer']">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            2. Lihat Preview Struk
+        </button>
+    </div>
+
     <div class="flex flex-col lg:flex-row gap-8">
         
         <!-- KOLOM KIRI: FORM INPUT -->
-        <div class="w-full lg:w-1/2 flex flex-col gap-6 no-print">
+        <div :class="['w-full lg:w-1/2 flex flex-col gap-6 no-print', activeTab === 'edit' ? 'flex' : 'hidden lg:flex']">
             
             <!-- CARD 1: PENGATURAN NOTA -->
             <div class="bg-white rounded-lg shadow-md p-6 h-fit">
@@ -288,30 +328,38 @@
                     </button>
                 </div>
 
-                <div v-for="(item, index) in form.items" :key="index" class="bg-gray-50 p-3 rounded border mb-3 relative">
-                    <button @click="removeItem(index)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold px-2">&times;</button>
+                <div v-for="(item, index) in form.items" :key="index" class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4 relative transition-shadow hover:shadow-sm">
+                    <button @click="removeItem(index)" class="absolute top-2.5 right-2.5 text-slate-400 hover:text-red-600 font-bold p-1.5 transition-colors" title="Hapus Produk">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
                     
-                    <div class="grid grid-cols-12 gap-2 mb-2">
-                        <div class="col-span-12 sm:col-span-5">
-                            <label class="block text-xs font-medium text-gray-500">Nama Produk</label>
-                            <input type="text" v-model="item.nama" class="w-full border rounded px-2 py-1 text-sm font-bold">
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-3">
+                        <div class="sm:col-span-5">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Produk</label>
+                            <input type="text" v-model="item.nama" class="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
                         </div>
-                        <div class="col-span-4 sm:col-span-3">
-                            <label class="block text-xs font-medium text-gray-500">Harga</label>
-                            <input type="number" v-model="item.harga" class="w-full border rounded px-2 py-1 text-sm">
-                        </div>
-                        <div class="col-span-4 sm:col-span-2">
-                            <label class="block text-xs font-medium text-gray-500">Qty</label>
-                            <input type="number" v-model="item.qty" class="w-full border rounded px-2 py-1 text-sm">
-                        </div>
-                        <div class="col-span-4 sm:col-span-2">
-                            <label class="block text-xs font-medium text-gray-500">Total</label>
-                            <div class="px-2 py-1 text-sm font-semibold bg-gray-200 rounded">{{ formatNumber(item.harga * item.qty) }}</div>
+                        <div class="grid grid-cols-3 gap-2 sm:col-span-7">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Harga</label>
+                                <input type="number" v-model="item.harga" class="w-full border border-slate-300 rounded px-2 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Qty</label>
+                                <input type="number" v-model="item.qty" class="w-full border border-slate-300 rounded px-2 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Total</label>
+                                <div class="px-2 py-2 text-sm font-bold bg-slate-200 text-slate-800 rounded text-center border border-slate-300 truncate">
+                                    {{ formatNumber(item.harga * item.qty) }}
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500">Keterangan / Sub-item (opsional)</label>
-                        <textarea v-model="item.keterangan" rows="2" class="w-full border rounded px-2 py-1 text-sm text-gray-700"></textarea>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan / Sub-item (opsional)</label>
+                        <textarea v-model="item.keterangan" rows="2" placeholder="Contoh: - Warna: Merah&#10;- Ukuran: A4" class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white"></textarea>
                     </div>
                 </div>
             </div>
@@ -415,7 +463,7 @@
         </div>
 
         <!-- KOLOM KANAN: PREVIEW NOTA -->
-        <div class="w-full lg:w-1/2 flex flex-col items-center justify-start">
+        <div :class="['w-full lg:w-1/2 flex flex-col items-center justify-start lg:sticky lg:top-4 self-start', activeTab === 'preview' ? 'flex' : 'hidden lg:flex']">
             
             <!-- Toggle View Mode -->
             <div class="w-full max-w-md bg-white rounded-lg shadow-sm p-2 mb-4 flex justify-between items-center gap-2 no-print border border-gray-100">
@@ -589,6 +637,7 @@
             return {
                 isFullWidth: false,
                 isViewMode: false,
+                activeTab: 'edit',
                 historyList: [],
                 searchQuery: "",
                 toast: {
