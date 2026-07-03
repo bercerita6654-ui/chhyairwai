@@ -47,7 +47,7 @@
             }
 
             /* Override parent layout grid/flex during print */
-            div.flex {
+            #app > div.flex {
                 display: block !important;
             }
 
@@ -119,6 +119,49 @@
             color: #000000 !important;
         }
 
+        .receipt-paper.generating-pdf {
+            width: 320px !important;
+            max-width: 320px !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+        }
+
+        /* Force rendering during PDF generation when normally hidden on mobile */
+        @media screen {
+            #preview-column.is-generating-pdf {
+                display: flex !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 320px !important;
+                max-width: 320px !important;
+                z-index: 9999 !important;
+                opacity: 0.01 !important;
+                pointer-events: none !important;
+                visibility: visible !important;
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+            }
+        }
+
+        /* Bulletproof Logo Centering for both normal preview and print */
+        .logo-container {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+            text-align: center !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+
+        .logo-container svg {
+            display: block !important;
+            margin: 0 auto !important;
+        }
+
         .receipt-paper.w-full-override {
             width: 100% !important;
             max-width: 100% !important;
@@ -173,9 +216,10 @@
             margin-bottom: 15px;
         }
 
-        #qrcode img {
-            width: 60px;
-            height: 60px;
+        #qrcode img, #qrcode canvas {
+            width: 60px !important;
+            height: 60px !important;
+            display: block;
         }
 
         .qr-text {
@@ -565,8 +609,8 @@
             <div id="receipt-container" :class="['receipt-paper', isFullWidth ? 'w-full-override' : '']">
                 
                 <!-- HEADER & LOGO -->
-                <div class="flex justify-center items-center mb-3">
-                    <svg viewBox="0 0 410 180" class="h-14 w-auto" xmlns="http://www.w3.org/2000/svg">
+                <div class="flex justify-center items-center mb-3 logo-container">
+                    <svg viewBox="0 0 410 180" width="128" height="56" class="h-14 w-auto" xmlns="http://www.w3.org/2000/svg">
                         <!-- c -->
                         <path d="M 74.7 55.3 A 35 35 0 1 0 74.7 104.7" fill="none" stroke="#0000FF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
                         <!-- a (with red dot) -->
@@ -815,50 +859,84 @@
             },
             downloadPDF() {
                 const element = document.getElementById('receipt-container');
+                const previewColumn = document.getElementById('preview-column');
                 if (!element) return;
 
-                // Save full width state
-                const originalFullWidth = this.isFullWidth;
-                
-                // Force to False (320px standard receipt layout) for optimal high-quality PDF generation
-                this.isFullWidth = false;
+                // Tambahkan kelas penanda is-generating-pdf pada preview-column agar dipaksa render secara visual (tapi tersembunyi off-screen)
+                if (previewColumn) {
+                    previewColumn.classList.add('is-generating-pdf');
+                }
 
-                // Wait for DOM update to ensure clientRect matches the 320px layout
-                this.$nextTick(() => {
+                // Simpan style inline asli
+                const originalStyle = element.getAttribute('style') || '';
+                
+                // Paksa ukuran kontainer menjadi 320px secara inline agar layout selalu rapi & proporsional
+                element.style.setProperty('width', '320px', 'important');
+                element.style.setProperty('max-width', '320px', 'important');
+                element.style.setProperty('box-shadow', 'none', 'important');
+                element.style.setProperty('border', 'none', 'important');
+                
+                // Tambahkan kelas penanda untuk menghilangkan bayangan dan mengatur latar belakang putih solid
+                element.classList.add('generating-pdf');
+
+                // Berikan jeda kecil agar browser merender ulang ukuran 320px secara presisi
+                setTimeout(() => {
+                    const rect = element.getBoundingClientRect();
+                    const widthMm = 80;
+                    
+                    // Hitung tinggi secara dinamis berdasarkan perbandingan rasio aspek aslinya di lebar 320px
+                    const heightMm = (rect.height / rect.width) * widthMm;
+
                     const customerName = this.form.kepada || 'Customer';
                     const formattedName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
                     const filename = `Nota_${formattedName}.pdf`;
 
-                    const rect = element.getBoundingClientRect();
-                    const widthMm = 80;
-                    // Proportional height + dynamic margin padding
-                    const heightMm = (rect.height / rect.width) * widthMm;
-
                     const opt = {
-                        margin:       [2, 2, 2, 2], // small elegant margin so content is not cut at borders
+                        margin:       [0, 0, 0, 0], // Tanpa margin luar tambahan agar pas dengan padding bawaan nota
                         filename:     filename,
                         image:        { type: 'jpeg', quality: 1.0 },
                         html2canvas:  { 
-                            scale: 4, // 4x scale for super crisp text
+                            scale: 2.5, // Resolusi tinggi retina yang hemat memori & anti-blank di berbagai gadget/browser
                             useCORS: true, 
                             letterRendering: true,
-                            backgroundColor: '#ffffff'
+                            backgroundColor: '#ffffff',
+                            logging: false,
+                            width: 320, // Kunci lebar render html2canvas ke 320px
+                            windowWidth: 320
                         },
                         jsPDF:        { 
                             unit: 'mm', 
-                            format: [widthMm + 4, heightMm + 4], // accommodate margins
+                            format: [widthMm, heightMm], // Format ukuran kertas PDF pas sesuai isi nota
                             orientation: 'portrait' 
                         }
                     };
 
-                    // Generate and download PDF, then restore width state
+                    // Render dan unduh PDF
                     html2pdf().set(opt).from(element).save().then(() => {
-                        this.isFullWidth = originalFullWidth;
+                        // Kembalikan style inline dan kelas semula setelah berhasil
+                        if (originalStyle) {
+                            element.setAttribute('style', originalStyle);
+                        } else {
+                            element.removeAttribute('style');
+                        }
+                        element.classList.remove('generating-pdf');
+                        if (previewColumn) {
+                            previewColumn.classList.remove('is-generating-pdf');
+                        }
                     }).catch(err => {
                         console.error(err);
-                        this.isFullWidth = originalFullWidth;
+                        // Pastikan style dikembalikan meskipun terjadi error
+                        if (originalStyle) {
+                            element.setAttribute('style', originalStyle);
+                        } else {
+                            element.removeAttribute('style');
+                        }
+                        element.classList.remove('generating-pdf');
+                        if (previewColumn) {
+                            previewColumn.classList.remove('is-generating-pdf');
+                        }
                     });
-                });
+                }, 200);
             },
             getQRCodeUrl() {
                 try {
