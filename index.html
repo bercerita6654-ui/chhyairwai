@@ -19,7 +19,16 @@
 
         /* Sembunyikan elemen UI saat di-print */
         @media print {
-            html, body {
+            .no-print, .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }
+            
+            /* Pastikan elemen parent tidak memiliki display: none saat print */
+            html, body, #app, .flex, #preview-column {
+                display: block !important;
                 width: 80mm !important;
                 background-color: white !important;
                 color: black !important;
@@ -28,16 +37,34 @@
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
+            
             body * {
                 visibility: hidden;
             }
+            
             #receipt-container, #receipt-container * {
-                visibility: visible;
+                visibility: visible !important;
+                display: block !important;
             }
+
+            /* Pertahankan layout tabel untuk struk */
+            #receipt-container table {
+                display: table !important;
+            }
+            #receipt-container tr {
+                display: table-row !important;
+            }
+            #receipt-container td {
+                display: table-cell !important;
+            }
+            #receipt-container tbody {
+                display: table-row-group !important;
+            }
+            
             #receipt-container {
-                position: absolute;
-                left: 0;
-                top: 0;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
                 width: 80mm !important;
                 max-width: 80mm !important;
                 margin: 0 !important;
@@ -46,6 +73,7 @@
                 border: none !important;
                 background-color: white !important;
             }
+            
             /* Hilangkan margin default browser saat print & atur ukuran halaman */
             @page {
                 size: 80mm auto;
@@ -270,7 +298,7 @@
     </header>
 
     <!-- TAB NAVIGASI KHUSUS MOBILE (Hanya Muncul di Layar Kecil) -->
-    <div class="lg:hidden mb-6 bg-white rounded-lg shadow p-1 flex gap-2 no-print border border-slate-200">
+    <div class="md:hidden mb-6 bg-white rounded-lg shadow p-1 flex gap-2 no-print border border-slate-200">
         <button @click="activeTab = 'edit'" 
                 :class="[activeTab === 'edit' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50', 'flex-1 py-3 px-4 rounded-md text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer']">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -288,10 +316,10 @@
         </button>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-8">
+    <div class="flex flex-col md:flex-row gap-8">
         
         <!-- KOLOM KIRI: FORM INPUT -->
-        <div :class="['w-full lg:w-1/2 flex flex-col gap-6 no-print', activeTab === 'edit' ? 'flex' : 'hidden lg:flex']">
+        <div :class="['w-full md:w-1/2 flex flex-col gap-6 no-print', activeTab === 'edit' ? 'flex' : 'hidden md:flex']">
             
             <!-- CARD 1: PENGATURAN NOTA -->
             <div class="bg-white rounded-lg shadow-md p-6 h-fit">
@@ -463,7 +491,7 @@
         </div>
 
         <!-- KOLOM KANAN: PREVIEW NOTA -->
-        <div :class="['w-full lg:w-1/2 flex flex-col items-center justify-start lg:sticky lg:top-4 self-start', activeTab === 'preview' ? 'flex' : 'hidden lg:flex']">
+        <div id="preview-column" :class="['w-full md:w-1/2 flex flex-col items-center justify-start md:sticky md:top-4 self-start', activeTab === 'preview' ? 'flex' : 'hidden md:flex']">
             
             <!-- Toggle View Mode -->
             <div class="w-full max-w-md bg-white rounded-lg shadow-sm p-2 mb-4 flex justify-between items-center gap-2 no-print border border-gray-100">
